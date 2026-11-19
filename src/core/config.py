@@ -6,7 +6,7 @@ Hai tầng model (không trộn):
   Blue Team (CP2–CP3, guardrails / pipeline / protected agent)
     → CỐ ĐỊNH OpenRouter ``liquid/lfm-3-1.7b:free``
        https://openrouter.ai/liquid/lfm-3-1.7b:free
-    → Cần ``OPENROUTER_API_KEY``
+    → Cần ``LIQUID_API_KEY`` (fallback: ``OPENROUTER_API_KEY``)
 
   Red Team (CP4)
     → Chọn một provider: OpenAI hoặc Gemini
@@ -36,8 +36,9 @@ PROVIDER_OPENROUTER = "openrouter"
 
 # --- Blue Team (LOCKED) ---
 BLUE_PROVIDER = PROVIDER_OPENROUTER
-BLUE_MODEL = "liquid/lfm-3-1.7b:free"
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+# Blue gọi thẳng API Liquid (OpenAI-compatible): https://docs.liquid.ai/api/overview
+BLUE_MODEL = "lfm3-1.7b"
+OPENROUTER_BASE_URL = "https://api.liquid.ai/openai/v1"  # tên cũ, nay trỏ tới Liquid
 DEFAULT_OPENROUTER_MODEL = BLUE_MODEL  # alias
 
 # --- Red Team ---
@@ -109,7 +110,10 @@ def get_blue_model() -> str:
 
 
 def get_openrouter_api_key() -> str:
-    return os.environ.get("OPENROUTER_API_KEY", "").strip()
+    return (
+        os.environ.get("LIQUID_API_KEY", "").strip()
+        or os.environ.get("OPENROUTER_API_KEY", "").strip()
+    )
 
 
 def blue_client_kwargs() -> dict:
@@ -117,7 +121,7 @@ def blue_client_kwargs() -> dict:
     return {
         "api_key": get_openrouter_api_key() or None,
         "base_url": (
-            os.environ.get("OPENROUTER_BASE_URL", OPENROUTER_BASE_URL).strip()
+            os.environ.get("LIQUID_BASE_URL", OPENROUTER_BASE_URL).strip()
             or OPENROUTER_BASE_URL
         ),
     }
@@ -237,8 +241,8 @@ def is_harder_model() -> bool:
 def setup_api_key():
     """Ensure keys for Blue (OpenRouter) + Red / Red Advance (OpenAI or Gemini)."""
     if not get_openrouter_api_key():
-        os.environ["OPENROUTER_API_KEY"] = input(
-            "Enter OpenRouter API Key (Blue): "
+        os.environ["LIQUID_API_KEY"] = input(
+            "Enter Liquid API Key (Blue): "
         ).strip()
     print(f"Blue  — {blue_provider_label()}  [LOCKED]")
 
